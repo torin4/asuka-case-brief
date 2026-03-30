@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Case Dashboard — Suzuki-Parker v. NCCHE</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/3.0.1/chartjs-plugin-annotation.min.js"></script>
+<style>
+:root {
+  --navy: #1e3a5f;
+  --blue: #2563eb;
+  --green: #16a34a;
+  --amber: #d97706;
+  --red: #dc2626;
+  --purple: #7c3aed;
+  --cyan: #0891b2;
+  --bg: #f1f5f9;
+  --card: #ffffff;
+  --border: #e2e8f0;
+  --text: #0f172a;
+  --muted: #64748b;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Segoe UI',system-ui,sans-serif; background:var(--bg); color:var(--text); }
+
+.header {
+  background:var(--navy);
+  color:white;
+  padding:14px 32px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:10px;
+}
+.header-title { font-size:17px; font-weight:700; }
+.header-sub { font-size:12px; opacity:0.65; margin-top:3px; }
+.header-right { display:flex; gap:10px; align-items:center; }
+.status-badge {
+  background:rgba(220,38,38,0.2);
+  border:1px solid rgba(220,38,38,0.4);
+  color:#fca5a5;
+  padding:4px 12px;
+  border-radius:20px;
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:0.03em;
+}
+.print-btn {
+  background:rgba(255,255,255,0.1);
+  border:1px solid rgba(255,255,255,0.2);
+  color:white;
+  padding:4px 12px;
+  border-radius:6px;
+  font-size:12px;
+  cursor:pointer;
+}
+.print-btn:hover { background:rgba(255,255,255,0.2); }
+
+.stats-row {
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:14px;
+  padding:18px 32px 0;
+}
+.stat-card {
+  background:var(--card);
+  border-radius:10px;
+  padding:14px 18px;
+  border-left:4px solid var(--border);
+  box-shadow:0 1px 3px rgba(0,0,0,0.07);
+}
+.stat-card.green { border-left-color:var(--green); }
+.stat-card.red { border-left-color:var(--red); }
+.stat-card.amber { border-left-color:var(--amber); }
+.stat-card.purple { border-left-color:var(--purple); }
+.stat-value { font-size:30px; font-weight:800; line-height:1; }
+.stat-value.green { color:var(--green); }
+.stat-value.red { color:var(--red); }
+.stat-value.amber { color:var(--amber); }
+.stat-value.purple { color:var(--purple); }
+.stat-label { font-size:10px; text-transform:uppercase; letter-spacing:0.06em; color:var(--muted); margin-top:5px; font-weight:600; }
+.stat-sub { font-size:11px; color:var(--muted); margin-top:6px; line-height:1.4; }
+
+.tab-nav {
+  display:flex;
+  padding:0 32px;
+  background:var(--card);
+  border-bottom:2px solid var(--border);
+  margin-top:18px;
+  overflow-x:auto;
+}
+.tab-btn {
+  padding:11px 18px;
+  background:none;
+  border:none;
+  border-bottom:3px solid transparent;
+  margin-bottom:-2px;
+  cursor:pointer;
+  font-size:13px;
+  font-weight:500;
+  color:var(--muted);
+  white-space:nowrap;
+  transition:all 0.15s;
+}
+.tab-btn.active { color:var(--navy); border-bottom-color:var(--blue); font-weight:700; }
+.tab-btn:hover:not(.active) { color:var(--navy); background:#f8fafc; }
+
+.tab-content { padding:22px 32px; }
+.tab-panel { display:none; }
+.tab-panel.active { display:block; }
+
+.card {
+  background:var(--card);
+  border-radius:10px;
+  padding:18px 22px;
+  box-shadow:0 1px 3px rgba(0,0,0,0.07);
+  margin-bottom:14px;
+}
+.card-title {
+  font-size:11px;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:0.07em;
+  color:var(--muted);
+  margin-bottom:14px;
+}
+.chart-wrap { position:relative; }
+
+.chart-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+
+.findings-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+.finding-box {
+  background:#fff5f5;
+  border:1px solid #fecaca;
+  border-radius:8px;
+  padding:14px 16px;
+}
+.finding-label { font-size:12px; font-weight:700; color:var(--red); margin-bottom:6px; }
+.finding-text { font-size:12px; color:#374151; line-height:1.5; }
+
+/* Timeline */
+.phase-section { margin-bottom:22px; }
+.phase-header {
+  font-size:11px;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:0.06em;
+  padding:6px 14px;
+  border-radius:20px;
+  margin-bottom:12px;
+  display:inline-block;
+}
+.ph-gray { background:#f1f5f9; color:#475569; }
+.ph-green { background:#dcfce7; color:#15803d; }
+.ph-red { background:#fee2e2; color:#991b1b; }
+.ph-amber { background:#fef3c7; color:#92400e; }
+.ph-blue { background:#dbeafe; color:#1e40af; }
+
+.tl-event { display:flex; gap:14px; margin-bottom:10px; align-items:flex-start; }
+.tl-dot {
+  width:11px; height:11px; border-radius:50%;
+  margin-top:5px; flex-shrink:0;
+}
+.d-normal { background:var(--green); }
+.d-warning { background:var(--amber); }
+.d-critical { background:var(--red); }
+.d-dose { background:var(--blue); }
+.d-intervention { background:var(--purple); }
+.d-admin { background:var(--muted); }
+
+.tl-card {
+  background:var(--card);
+  border-radius:8px;
+  padding:11px 14px;
+  flex:1;
+  box-shadow:0 1px 2px rgba(0,0,0,0.05);
+  border-left:3px solid #e2e8f0;
+}
+.tl-card.critical { border-left-color:var(--red); background:#fff8f8; }
+.tl-card.warning { border-left-color:var(--amber); background:#fffdf0; }
+.tl-card.intervention { border-left-color:var(--purple); background:#fdf8ff; }
+.tl-card.dose { border-left-color:var(--blue); }
+.tl-card.normal { border-left-color:var(--green); }
+
+.tl-date { font-size:10px; color:var(--muted); font-weight:600; }
+.tl-title { font-size:13px; font-weight:700; margin:2px 0 5px; }
+.tl-detail { font-size:12px; color:#4b5563; line-height:1.5; }
+.tl-metrics { display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; }
+.mb {
+  font-size:10px; padding:2px 7px; border-radius:4px; font-weight:600;
+}
+.mb-n { background:#dcfce7; color:#15803d; }
+.mb-w { background:#fef3c7; color:#92400e; }
+.mb-c { background:#fee2e2; color:#991b1b; }
+
+/* Evidence */
+.ev-summary { display:flex; gap:12px; margin-bottom:16px; }
+.ev-summary-box {
+  flex:1; border-radius:8px; padding:12px; text-align:center;
+}
+.ev-count { font-size:26px; font-weight:800; }
+.ev-label { font-size:11px; font-weight:700; margin-top:2px; }
+.ev-item {
+  display:flex; align-items:flex-start; gap:12px;
+  padding:11px 14px;
+  background:var(--card);
+  border-radius:8px;
+  box-shadow:0 1px 2px rgba(0,0,0,0.05);
+  margin-bottom:7px;
+}
+.ev-icon { width:22px; text-align:center; flex-shrink:0; margin-top:1px; display:flex; align-items:center; justify-content:center; }
+.ev-name { font-size:13px; font-weight:500; }
+.ev-note { font-size:11px; color:var(--muted); margin-top:2px; }
+.pr-badge {
+  font-size:9px; font-weight:700; padding:2px 8px;
+  border-radius:4px; text-transform:uppercase;
+  white-space:nowrap; flex-shrink:0; align-self:flex-start; margin-top:3px;
+}
+.pr-critical { background:#fee2e2; color:#991b1b; }
+.pr-high { background:#fef3c7; color:#92400e; }
+
+/* Arguments */
+.arg-card {
+  background:var(--card);
+  border-radius:10px;
+  padding:18px 22px;
+  box-shadow:0 1px 3px rgba(0,0,0,0.07);
+  margin-bottom:14px;
+  border-left:5px solid var(--border);
+}
+.arg-card.vs { border-left-color:var(--red); }
+.arg-card.s { border-left-color:var(--amber); }
+.arg-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:10px; }
+.arg-title { font-size:15px; font-weight:700; flex:1; }
+.arg-badge {
+  font-size:10px; font-weight:700; padding:3px 10px;
+  border-radius:20px; text-transform:uppercase; white-space:nowrap;
+}
+.badge-vs { background:#fee2e2; color:#991b1b; }
+.badge-s { background:#fef3c7; color:#92400e; }
+.arg-desc { font-size:12px; color:var(--muted); margin-bottom:10px; line-height:1.6; }
+.arg-list { list-style:none; }
+.arg-list li {
+  font-size:12px; padding:3px 0 3px 18px;
+  position:relative; line-height:1.5;
+}
+.arg-list li::before { content:'→'; position:absolute; left:0; color:var(--blue); font-weight:700; }
+.arg-needed {
+  margin-top:10px; padding:9px 13px;
+  background:#f0f9ff; border-radius:6px;
+  font-size:11px; color:#0369a1;
+  border-left:3px solid #0369a1;
+  line-height:1.5;
+}
+
+.footer {
+  text-align:center; padding:16px 32px;
+  font-size:11px; color:var(--muted);
+  border-top:1px solid var(--border);
+}
+
+@media (max-width:900px) {
+  .stats-row { grid-template-columns:1fr 1fr; }
+  .chart-grid { grid-template-columns:1fr; }
+  .findings-grid { grid-template-columns:1fr; }
+  .tab-content { padding:16px; }
+  .stats-row { padding:14px 16px 0; }
+  .tab-nav { padding:0 16px; }
+  .header { padding:12px 16px; }
+}
+@media print {
+  .tab-nav,.print-btn { display:none; }
+  .tab-panel { display:block !important; page-break-before:always; }
+  .tab-panel:first-child { page-break-before:auto; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="header-title">Suzuki-Parker v. National Cancer Center Hospital East (NCCHE)</div>
+    <div class="header-sub">Patient ID: 0009760431 &nbsp;·&nbsp; Protocol: EPOC1904 (jRCT2033200431) &nbsp;·&nbsp; PI: Harano Kenichi &nbsp;·&nbsp; Updated: March 30, 2026</div>
+  </div>
+  <div class="header-right">
+    <div class="status-badge"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:4px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Pre-Filing — Evidence Gathering</div>
+    <button class="print-btn" onclick="window.print()"><svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>Print / PDF</button>
+  </div>
+</div>
+
+<div class="stats-row">
+  <div class="stat-card green">
+    <div class="stat-value green">106</div>
+    <div class="stat-label">Baseline eGFR (Dec 2)</div>
+    <div class="stat-sub">CRE 0.50 · Normal renal function throughout Trial Part 1</div>
+  </div>
+  <div class="stat-card red">
+    <div class="stat-value red">13.6</div>
+    <div class="stat-label">Lowest eGFR (Mar 21)</div>
+    <div class="stat-sub">87% decline · Stage 5 CKD approaching · CRE 3.22 (6× baseline)</div>
+  </div>
+  <div class="stat-card amber">
+    <div class="stat-value amber">39</div>
+    <div class="stat-label">Days to Nephrology</div>
+    <div class="stat-sub">Jan 5 first alarm → Mar 3 first referral · Immediate admission ordered</div>
+  </div>
+  <div class="stat-card purple">
+    <div class="stat-value purple">3</div>
+    <div class="stat-label">Documented Failure Points</div>
+    <div class="stat-sub">Dosing · Discharge · 6-visit outpatient mismanagement</div>
+  </div>
+</div>
+
+<div class="tab-nav">
+  <button class="tab-btn active" onclick="switchTab('overview',this)">Overview</button>
+  <button class="tab-btn" onclick="switchTab('charts',this)">Lab Charts</button>
+  <button class="tab-btn" onclick="switchTab('timeline',this)">Clinical Timeline</button>
+  <button class="tab-btn" onclick="switchTab('evidence',this)">Evidence Status</button>
+  <button class="tab-btn" onclick="switchTab('arguments',this)">Negligence Arguments</button>
+</div>
+
+<div class="tab-content">
+
+  <!-- OVERVIEW -->
+  <div class="tab-panel active" id="tab-overview">
+    <div class="card">
+      <div class="card-title">eGFR Trajectory — The Core Evidence (Dec 2025 – Mar 2026)</div>
+      <div class="chart-wrap" style="height:400px;">
+        <canvas id="egfrChart"></canvas>
+      </div>
+    </div>
+    <div class="findings-grid">
+      <div class="finding-box">
+        <div class="finding-label"><svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Failure Point 1 — Jan 5, 2026</div>
+        <div class="finding-text">Pre-dose labs reviewed: eGFR 53 (35% crash), CRP 60× normal. Protocol requires HOLD at eGFR &lt;60. Decision to dose was deliberate. Potassium supplement Jan 13 proves documented awareness.</div>
+      </div>
+      <div class="finding-box">
+        <div class="finding-label"><svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Failure Point 2 — Jan 26, 2026</div>
+        <div class="finding-text">eGFR 31 (70% decline from baseline). RIFLE "Failure" category. Discharged with kidneys noted as "swollen." No nephrology referral. PET scan same day — contrast exposure possible.</div>
+      </div>
+      <div class="finding-box">
+        <div class="finding-label"><svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Failure Point 3 — Feb 6–Mar 2, 2026</div>
+        <div class="finding-text">6 outpatient visits with worsening labs. Blood transfusion (2 units) + IV fluids administered outpatient. No hospitalization. No referral. Cystatin C 3.64 (4.4× normal) on Mar 3. Immediate admission ordered.</div>
+      </div>
+    </div>
+    <div class="card" style="background:#f0fdf4; border:1px solid #bbf7d0;">
+      <div class="card-title" style="color:#15803d;">Key Confirmatory Labs</div>
+      <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px; font-size:12px;">
+        <div><strong style="color:#15803d;">Cystatin C (Mar 3)</strong><br>3.64 mg/L — 4.4× normal<br><span style="color:var(--muted)">Confirms structural damage (unaffected by muscle mass)</span></div>
+        <div><strong style="color:#dc2626;">Epithelial Casts (Feb 20)</strong><br>1+ /LPF<br><span style="color:var(--muted)">Direct evidence of kidney tubular cell death</span></div>
+        <div><strong style="color:#dc2626;">NAG Urine (Mar 25)</strong><br>29 U/L — 10× normal<br><span style="color:var(--muted)">Proximal tubule damage biomarker</span></div>
+        <div><strong style="color:#d97706;">UPCr (Mar 3)</strong><br>0.76 g/g — 5× normal<br><span style="color:var(--muted)">Glomerular/tubular barrier breakdown</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LAB CHARTS -->
+  <div class="tab-panel" id="tab-charts">
+    <div class="card">
+      <div class="card-title">Creatinine (CRE) — mg/dL &nbsp;|&nbsp; Normal upper limit: 1.1 mg/dL (female)</div>
+      <div class="chart-wrap" style="height:280px;">
+        <canvas id="creChart"></canvas>
+      </div>
+    </div>
+    <div class="chart-grid">
+      <div class="card">
+        <div class="card-title">BUN — mg/dL &nbsp;|&nbsp; Normal: 7–20 mg/dL</div>
+        <div class="chart-wrap" style="height:250px;">
+          <canvas id="bunChart"></canvas>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">CRP — mg/dL &nbsp;|&nbsp; Normal: &lt;0.3 mg/dL &nbsp;|&nbsp; Dosing dates marked ▲</div>
+        <div class="chart-wrap" style="height:250px;">
+          <canvas id="crpChart"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="chart-grid">
+      <div class="card">
+        <div class="card-title">Potassium (K) — mmol/L &nbsp;|&nbsp; Normal: 3.6–4.8 mmol/L</div>
+        <div class="chart-wrap" style="height:220px;">
+          <canvas id="kChart"></canvas>
+        </div>
+      </div>
+      <div class="card" style="display:flex; flex-direction:column; justify-content:center;">
+        <div class="card-title">Notable Single-Point Labs</div>
+        <table style="width:100%; font-size:12px; border-collapse:collapse;">
+          <thead>
+            <tr style="background:#f8fafc;">
+              <th style="text-align:left; padding:6px 8px; border-bottom:1px solid var(--border);">Lab</th>
+              <th style="text-align:left; padding:6px 8px; border-bottom:1px solid var(--border);">Date</th>
+              <th style="text-align:left; padding:6px 8px; border-bottom:1px solid var(--border);">Value</th>
+              <th style="text-align:left; padding:6px 8px; border-bottom:1px solid var(--border);">Normal</th>
+              <th style="text-align:left; padding:6px 8px; border-bottom:1px solid var(--border);">Multiple</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td style="padding:5px 8px;">Cystatin C</td><td>Mar 3</td><td style="color:var(--red);font-weight:700;">3.64 mg/L</td><td>0.49–0.82</td><td style="color:var(--red);font-weight:700;">4.4×</td></tr>
+            <tr style="background:#f8fafc;"><td style="padding:5px 8px;">NAG (urine)</td><td>Mar 25</td><td style="color:var(--red);font-weight:700;">29 U/L</td><td>0–3</td><td style="color:var(--red);font-weight:700;">10×</td></tr>
+            <tr><td style="padding:5px 8px;">UPCr</td><td>Mar 3</td><td style="color:var(--red);font-weight:700;">0.76 g/g</td><td>&lt;0.15</td><td style="color:var(--red);font-weight:700;">5×</td></tr>
+            <tr style="background:#f8fafc;"><td style="padding:5px 8px;">Urine Protein</td><td>Feb 20</td><td style="color:var(--red);font-weight:700;">24.9 mg/dL</td><td>0–10</td><td style="color:var(--amber);font-weight:700;">2.5×</td></tr>
+            <tr><td style="padding:5px 8px;">Phosphorus</td><td>Jan 26</td><td style="color:var(--amber);font-weight:700;">4.8</td><td>2.5–4.5</td><td style="color:var(--amber);font-weight:700;">High</td></tr>
+            <tr style="background:#f8fafc;"><td style="padding:5px 8px;">Uric Acid</td><td>Jan 26→Feb 20</td><td style="color:var(--amber);font-weight:700;">7.0→8.5</td><td>2.4–6.0</td><td style="color:var(--amber);font-weight:700;">High</td></tr>
+            <tr><td style="padding:5px 8px;">Epithelial Casts</td><td>Feb 20</td><td style="color:var(--red);font-weight:700;">1+ /LPF</td><td>Negative</td><td style="color:var(--red);font-weight:700;">Tubular death</td></tr>
+            <tr style="background:#f8fafc;"><td style="padding:5px 8px;">Hyaline Casts</td><td>Feb 20→Mar 3</td><td style="color:var(--red);font-weight:700;">1+→2+</td><td>Negative</td><td style="color:var(--red);font-weight:700;">Worsening</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TIMELINE -->
+  <div class="tab-panel" id="tab-timeline">
+    <div id="tl-container"></div>
+  </div>
+
+  <!-- EVIDENCE -->
+  <div class="tab-panel" id="tab-evidence">
+    <div id="ev-container"></div>
+  </div>
+
+  <!-- ARGUMENTS -->
+  <div class="tab-panel" id="tab-arguments">
+    <div id="arg-container"></div>
+  </div>
+
+</div>
+
+<div class="footer">
+  Suzuki-Parker v. NCCHE &nbsp;·&nbsp; Protocol EPOC1904 &nbsp;·&nbsp; All data sourced from primary medical records &nbsp;·&nbsp; For legal review purposes only &nbsp;·&nbsp; March 30, 2026
+</div>
+
+<script>
+// ============================================================
+// DATA
+// ============================================================
+
+const renalLabels = [
+  'Dec 1','Dec 2','Dec 4','Dec 8','Dec 11','Dec 15','Dec 22','Dec 24','Dec 25',
+  'Jan 5','Jan 19','Jan 26',
+  'Feb 6','Feb 13','Feb 20','Feb 27',
+  'Mar 3','Mar 17','Mar 21','Mar 22','Mar 25'
+];
+// indices:  0      1      2      3      4       5       6       7       8
+//           9      10     11
+//           12     13     14     15
+//           16     17     18     19     20
+
+const egfrData = [101,106,94,85,94,94,88,82,82, 53,44,31, 26,25,20,20, 18,14.9,13.6,15.1,15.7];
+const creData  = [0.54,0.50,0.49,0.60,0.55,0.55,0.58,0.62,0.62, 0.93,1.10,1.53, 1.80,1.81,2.25,2.21, null,null,3.22,3.09,null];
+const bunData  = [16,13,12,13,12,10,9,13,13, 18,13,19, 33,45,59,54, 61,46,60,57,92];
+const kData    = [4.0,3.9,3.7,3.7,3.4,3.4,3.3,3.7,3.7, 3.2,3.1,4.0, 3.5,4.0,4.0,3.7, null,null,4.4,null,null];
+
+const crpLabels = ['Dec 24','Jan 5','Jan 19','Jan 26','Mar 21','Mar 22','Mar 25'];
+const crpValues = [13.32,17.93,20.78,21.71,16.63,19.28,21.2];
+
+const egfrColors = [
+  '#16a34a','#16a34a','#16a34a','#16a34a','#16a34a','#16a34a','#16a34a','#16a34a','#16a34a',
+  '#dc2626','#dc2626','#dc2626',
+  '#d97706','#d97706','#d97706','#d97706',
+  '#7c3aed','#7c3aed','#7c3aed','#7c3aed','#7c3aed'
+];
+
+// ============================================================
+// CHARTS
+// ============================================================
+
+Chart.register(window['chartjs-plugin-annotation']);
+
+// --- eGFR ---
+new Chart(document.getElementById('egfrChart').getContext('2d'), {
+  type: 'line',
+  data: {
+    labels: renalLabels,
+    datasets: [{
+      label: 'eGFR (mL/min/1.73m²)',
+      data: egfrData,
+      borderColor: '#2563eb',
+      backgroundColor: 'rgba(37,99,235,0.06)',
+      pointBackgroundColor: egfrColors,
+      pointBorderColor: egfrColors,
+      pointBorderWidth: 2,
+      pointRadius: 6,
+      pointHoverRadius: 9,
+      borderWidth: 2.5,
+      fill: true,
+      tension: 0.35
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          afterLabel(ctx) {
+            const v = ctx.parsed.y;
+            if (v >= 90) return 'Normal (Stage G1–2)';
+            if (v >= 60) return 'Mild decline (Stage G3a)';
+            if (v >= 30) return 'Stage G3b — Should trigger HOLD';
+            if (v >= 15) return 'Stage G4 — Severe failure';
+            return 'Stage G5 — Near end-stage';
+          }
+        }
+      },
+      annotation: {
+        annotations: {
+          band_p1: {
+            type: 'box', xMin: 0, xMax: 8,
+            backgroundColor: 'rgba(22,163,74,0.04)',
+            borderWidth: 0,
+            label: { display: true, content: 'Part 1 — Normal', position: {x:'start',y:'start'}, color: '#16a34a', font:{size:10,weight:'bold'}, backgroundColor:'rgba(220,252,231,0.8)', padding:3 }
+          },
+          band_p2: {
+            type: 'box', xMin: 9, xMax: 11,
+            backgroundColor: 'rgba(220,38,38,0.05)',
+            borderWidth: 0,
+            label: { display: true, content: 'CRASH', position:{x:'center',y:'start'}, color:'#dc2626', font:{size:10,weight:'bold'}, backgroundColor:'rgba(254,226,226,0.8)', padding:3 }
+          },
+          band_p3: {
+            type: 'box', xMin: 12, xMax: 15,
+            backgroundColor: 'rgba(217,119,6,0.05)',
+            borderWidth: 0,
+            label: { display: true, content: 'Mismanagement', position:{x:'center',y:'start'}, color:'#d97706', font:{size:10,weight:'bold'}, backgroundColor:'rgba(254,243,199,0.8)', padding:3 }
+          },
+          band_p4: {
+            type: 'box', xMin: 16, xMax: 20,
+            backgroundColor: 'rgba(124,58,237,0.05)',
+            borderWidth: 0,
+            label: { display: true, content: 'Specialist', position:{x:'center',y:'start'}, color:'#7c3aed', font:{size:10,weight:'bold'}, backgroundColor:'rgba(237,233,254,0.8)', padding:3 }
+          },
+          thr60: {
+            type: 'line', yMin: 60, yMax: 60,
+            borderColor: 'rgba(217,119,6,0.75)', borderWidth: 2, borderDash:[8,4],
+            label:{ display:true, content:'eGFR 60 — Protocol HOLD', position:'start', color:'#d97706', font:{size:10,weight:'bold'}, backgroundColor:'rgba(254,243,199,0.9)', padding:{x:5,y:3} }
+          },
+          thr30: {
+            type: 'line', yMin: 30, yMax: 30,
+            borderColor: 'rgba(220,38,38,0.75)', borderWidth: 2, borderDash:[8,4],
+            label:{ display:true, content:'eGFR 30 — RIFLE Failure', position:'start', color:'#dc2626', font:{size:10,weight:'bold'}, backgroundColor:'rgba(254,226,226,0.9)', padding:{x:5,y:3} }
+          },
+          fp1: {
+            type: 'line', xMin: 9, xMax: 9,
+            borderColor: 'rgba(220,38,38,0.45)', borderWidth: 2, borderDash:[4,4],
+            label:{ display:true, content:'FP1', position:'start', yAdjust:-90, color:'#dc2626', font:{size:10,weight:'bold'}, backgroundColor:'rgba(255,255,255,0.9)', padding:{x:4,y:2} }
+          },
+          fp2: {
+            type: 'line', xMin: 11, xMax: 11,
+            borderColor: 'rgba(220,38,38,0.45)', borderWidth: 2, borderDash:[4,4],
+            label:{ display:true, content:'FP2', position:'start', yAdjust:-70, color:'#dc2626', font:{size:10,weight:'bold'}, backgroundColor:'rgba(255,255,255,0.9)', padding:{x:4,y:2} }
+          },
+          nephro: {
+            type: 'line', xMin: 16, xMax: 16,
+            borderColor: 'rgba(124,58,237,0.5)', borderWidth: 2, borderDash:[4,4],
+            label:{ display:true, content:'Nephro', position:'start', yAdjust:-50, color:'#7c3aed', font:{size:10,weight:'bold'}, backgroundColor:'rgba(255,255,255,0.9)', padding:{x:4,y:2} }
+          }
+        }
+      }
+    },
+    scales: {
+      x: { grid:{color:'rgba(0,0,0,0.03)'}, ticks:{font:{size:11},maxRotation:45} },
+      y: {
+        min: 0, max: 120,
+        grid:{color:'rgba(0,0,0,0.04)'},
+        ticks:{font:{size:11}},
+        title:{display:true,text:'eGFR (mL/min/1.73m²)',font:{size:12}}
+      }
+    }
+  }
+});
+
+// --- CRE ---
+new Chart(document.getElementById('creChart').getContext('2d'), {
+  type: 'line',
+  data: {
+    labels: renalLabels,
+    datasets: [{
+      label: 'Creatinine mg/dL',
+      data: creData,
+      borderColor: '#dc2626',
+      backgroundColor: 'rgba(220,38,38,0.07)',
+      pointBackgroundColor: '#dc2626',
+      pointRadius: 5,
+      borderWidth: 2.5,
+      fill: true,
+      tension: 0.35,
+      spanGaps: false
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend:{display:false},
+      annotation:{ annotations:{
+        ul:{ type:'line', yMin:1.1, yMax:1.1,
+          borderColor:'rgba(217,119,6,0.7)', borderWidth:2, borderDash:[6,3],
+          label:{display:true,content:'Upper normal 1.1',position:'end',color:'#d97706',font:{size:10},backgroundColor:'rgba(254,243,199,0.9)',padding:{x:4,y:2}}
+        }
+      }}
+    },
+    scales: {
+      x:{ ticks:{font:{size:10},maxRotation:45} },
+      y:{ min:0, max:3.8, title:{display:true,text:'mg/dL',font:{size:11}} }
+    }
+  }
+});
+
+// --- BUN ---
+new Chart(document.getElementById('bunChart').getContext('2d'), {
+  type: 'line',
+  data: {
+    labels: renalLabels,
+    datasets: [{
+      label: 'BUN mg/dL',
+      data: bunData,
+      borderColor: '#d97706',
+      backgroundColor: 'rgba(217,119,6,0.07)',
+      pointBackgroundColor: '#d97706',
+      pointRadius: 4,
+      borderWidth: 2,
+      fill: true,
+      tension: 0.35
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend:{display:false},
+      annotation:{ annotations:{
+        ul:{ type:'line', yMin:20, yMax:20,
+          borderColor:'rgba(217,119,6,0.7)', borderWidth:2, borderDash:[6,3],
+          label:{display:true,content:'Upper normal 20',position:'end',color:'#d97706',font:{size:10},backgroundColor:'rgba(254,243,199,0.9)',padding:{x:4,y:2}}
+        }
+      }}
+    },
+    scales: {
+      x:{ ticks:{font:{size:10},maxRotation:45} },
+      y:{ min:0, title:{display:true,text:'mg/dL',font:{size:11}} }
+    }
+  }
+});
+
+// --- CRP ---
+new Chart(document.getElementById('crpChart').getContext('2d'), {
+  type: 'line',
+  data: {
+    labels: crpLabels,
+    datasets: [{
+      label: 'CRP mg/dL',
+      data: crpValues,
+      borderColor: '#7c3aed',
+      backgroundColor: 'rgba(124,58,237,0.07)',
+      pointBackgroundColor: ['#2563eb','#dc2626','#dc2626','#dc2626','#7c3aed','#7c3aed','#7c3aed'],
+      pointRadius: 6,
+      borderWidth: 2.5,
+      fill: true,
+      tension: 0.35
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend:{display:false},
+      tooltip:{
+        callbacks:{
+          afterLabel(ctx){ return `${(ctx.parsed.y/0.3).toFixed(0)}× upper normal`; }
+        }
+      },
+      annotation:{ annotations:{
+        ul:{ type:'line', yMin:0.3, yMax:0.3,
+          borderColor:'rgba(220,38,38,0.6)', borderWidth:2, borderDash:[6,3],
+          label:{display:true,content:'Normal limit 0.3',position:'end',color:'#dc2626',font:{size:10},backgroundColor:'rgba(254,226,226,0.9)',padding:{x:4,y:2}}
+        }
+      }}
+    },
+    scales: {
+      x:{ ticks:{font:{size:11}} },
+      y:{ min:0, max:25, title:{display:true,text:'mg/dL (Normal <0.3)',font:{size:11}} }
+    }
+  }
+});
+
+// --- K ---
+new Chart(document.getElementById('kChart').getContext('2d'), {
+  type: 'line',
+  data: {
+    labels: renalLabels,
+    datasets: [{
+      label: 'Potassium mmol/L',
+      data: kData,
+      borderColor: '#0891b2',
+      backgroundColor: 'rgba(8,145,178,0.06)',
+      pointBackgroundColor: '#0891b2',
+      pointRadius: 4,
+      borderWidth: 2,
+      fill: true,
+      tension: 0.35,
+      spanGaps: false
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend:{display:false},
+      annotation:{ annotations:{
+        lo:{ type:'line', yMin:3.6, yMax:3.6, borderColor:'rgba(217,119,6,0.4)', borderWidth:1.5, borderDash:[4,3] },
+        hi:{ type:'line', yMin:4.8, yMax:4.8, borderColor:'rgba(217,119,6,0.4)', borderWidth:1.5, borderDash:[4,3] }
+      }}
+    },
+    scales: {
+      x:{ ticks:{font:{size:10},maxRotation:45} },
+      y:{ min:2.5, max:6.0, title:{display:true,text:'mmol/L',font:{size:11}} }
+    }
+  }
+});
+
+// ============================================================
+// TIMELINE DATA
+// ============================================================
+
+const phases = [
+  {
+    label: 'Phase 0: Pre-Trial (Sept–Oct 2025)',
+    ph: 'ph-gray',
+    events: [
+      { date:'Sept 18, 2025', type:'admin', title:'First Consultation', detail:'Trial options discussed: iCAR-ILC-N101 (GPC3-CAR), SMP-3124 (CHK1), B7H4-ADC, CCNE1/CDK2, E7820 (PARP inhibitor). E7820 excluded due to interstitial pneumonitis history. Limited alternative options documented.', metrics:[] },
+      { date:'Oct 3, 2025', type:'normal', title:'Screening Results — Eligible', detail:'GPC3: +2 (positive). HLA-A24 match — eligible for enrollment. HLA antibody negative but elevated values noted.', metrics:[{l:'GPC3',v:'+2 Positive',t:'n'},{l:'HLA-A24',v:'Match',t:'n'}] },
+      { date:'Oct 10, 2025', type:'warning', title:'<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Protocol Modification Disclosed', detail:'Dr. Funasaka discloses: only 1 drug batch can be manufactured after apheresis (December maintenance). Protocol being revised to allow fewer than 8 doses. Handwritten note: "開示対象とならない" (not subject to disclosure) — RED FLAG.', metrics:[{l:'Red Flag',v:'開示対象とならない',t:'c'}] },
+      { date:'Oct 20–22, 2025', type:'admin', title:'Apheresis Hospitalization', detail:'Stem cell collection for drug manufacture. Subclavian CVC inserted by Dr. Shimura Mai. Peritoneal port constructed for intraperitoneal drug delivery. Ward 8F Room 814.', metrics:[] },
+    ]
+  },
+  {
+    label: 'Phase 1: Trial Part 1 (Nov–Dec 2025) — Pristine Kidney Function',
+    ph: 'ph-green',
+    events: [
+      { date:'Nov 20, 2025', type:'dose', title:'Trial Begins — First Dose', detail:'First dose of iCAR-ILC-N101 administered intraperitoneally. Baseline renal function confirmed normal.', metrics:[{l:'eGFR',v:'87',t:'n'}] },
+      { date:'Dec 1–2, 2025', type:'normal', title:'Labs — Peak Normal Kidney Function', detail:'eGFR reaches 106 — peak baseline. All renal markers completely normal throughout Part 1.', metrics:[{l:'eGFR',v:'101–106',t:'n'},{l:'CRE',v:'0.50–0.54',t:'n'},{l:'BUN',v:'13–16',t:'n'},{l:'K',v:'3.9–4.0',t:'n'}] },
+      { date:'Dec 8–22, 2025', type:'normal', title:'Labs — Continued Normal', detail:'All renal values stable and within normal range through remaining Part 1 doses.', metrics:[{l:'eGFR',v:'88–94',t:'n'},{l:'CRE',v:'0.55–0.58',t:'n'}] },
+      { date:'Dec 24, 2025', type:'normal', title:'End of Trial Part 1 + PET Scan', detail:'Part 1 complete. eGFR 82, still normal. CRP 13.32 (44× normal) already elevated, consistent with treatment effect. PET scan performed.', metrics:[{l:'eGFR',v:'82',t:'n'},{l:'CRE',v:'0.62',t:'n'},{l:'CRP',v:'13.32 (44×)',t:'w'}] },
+    ]
+  },
+  {
+    label: 'Phase 2: The Crash — Trial Part 2 (Jan 2026) — FAILURE POINTS 1 & 2',
+    ph: 'ph-red',
+    events: [
+      { date:'Jan 5, 2026', type:'critical', title:'<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>FAILURE POINT 1 — Pre-Dose Labs Reviewed and Ignored', detail:'Lab record explicitly notes "pre-dose labs before Part 2." eGFR crashed 35% from baseline. CRP 60× normal. Standard protocol requires HOLD at eGFR <60. CRE nearly doubled from 0.62 to 0.93. The decision to continue dosing was made with full knowledge of these values.', metrics:[{l:'eGFR',v:'53 ↓35%',t:'c'},{l:'CRE',v:'0.93',t:'c'},{l:'BUN',v:'18',t:'w'},{l:'CRP',v:'17.93 (60×)',t:'c'},{l:'KDIGO',v:'Risk',t:'c'}] },
+      { date:'Jan 8, 2026', type:'dose', title:'Dose 6 Administered', detail:'Trial drug administered despite eGFR 53 (35% below baseline). No protocol hold.', metrics:[{l:'eGFR at dosing',v:'53',t:'c'}] },
+      { date:'Jan 13, 2026', type:'warning', title:'Potassium Supplement Started', detail:'K+ 3mg TID initiated — 5 days before Dose 7. Documented awareness of electrolyte impact from ongoing renal decline.', metrics:[{l:'K supplement',v:'3mg TID',t:'w'},{l:'Significance',v:'Proves awareness',t:'w'}] },
+      { date:'Jan 19, 2026', type:'critical', title:'<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Dose 7 — &gt;50% Decline from Baseline, Still Dosing', detail:'eGFR 44 = >50% decline from peak baseline 106. RIFLE "Injury" category triggered. CRP 69× normal. Both values still worsening vs. Jan 5. Trial drug administered again.', metrics:[{l:'eGFR',v:'44 ↓58%',t:'c'},{l:'CRE',v:'1.10',t:'c'},{l:'CRP',v:'20.78 (69×)',t:'c'},{l:'RIFLE',v:'INJURY',t:'c'}] },
+      { date:'Jan 26, 2026', type:'critical', title:'<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>FAILURE POINT 2 — Discharged with Failing Kidneys, No Referral', detail:'eGFR 31 = 70% decline from baseline. RIFLE "Failure" category. Phosphorus elevated (4.8). Uric acid elevated (7.0). PET scan performed same day — if iodinated CT contrast was administered with eGFR 31, this is an additional negligence point. Discharged with kidneys noted as "swollen." NO nephrology referral ordered.', metrics:[{l:'eGFR',v:'31 ↓70%',t:'c'},{l:'CRE',v:'1.53',t:'c'},{l:'CRP',v:'21.71 (72×)',t:'c'},{l:'Phos',v:'4.8 (H)',t:'w'},{l:'Uric Acid',v:'7.0 (H)',t:'w'},{l:'RIFLE',v:'FAILURE',t:'c'}] },
+      { date:'Jan 28, 2026', type:'dose', title:'Trial Completed — Predonine 5mg Started', detail:'8th and final dose. Potassium supplement stopped. Predonine 5mg/day started — conservative dose for confirmed Stage 3b–4 AKI with CRP 72× normal.', metrics:[{l:'Predonine',v:'5mg/day',t:'w'},{l:'Adequacy',v:'Insufficient for AKI',t:'c'}] },
+    ]
+  },
+  {
+    label: 'Phase 3: Outpatient Mismanagement (Feb 2026) — FAILURE POINT 3',
+    ph: 'ph-amber',
+    events: [
+      { date:'Feb 6, 2026', type:'warning', title:'Outpatient Visit 1 — Stage 4 CKD Confirmed, No Referral', detail:'eGFR 26. CRE 1.80. BUN 33 (high). Stage 4 CKD confirmed. Predonine 5mg — unchanged. No nephrology referral ordered.', metrics:[{l:'eGFR',v:'26 (Stage 4)',t:'c'},{l:'CRE',v:'1.80',t:'c'},{l:'BUN',v:'33 (H)',t:'w'}] },
+      { date:'Feb 13, 2026', type:'warning', title:'Outpatient Visit 2 — BUN Rising, No Improvement', detail:'eGFR 25. BUN escalating to 45. CRE stable at 1.81. No referral. No escalation of treatment.', metrics:[{l:'eGFR',v:'25',t:'c'},{l:'BUN',v:'45 (H)',t:'c'},{l:'CRE',v:'1.81',t:'c'}] },
+      { date:'Feb 20, 2026', type:'critical', title:'<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>FAILURE POINT 3 — Blood Transfusion Outpatient, No Admission', detail:'Blood transfusion (2 units) + IV fluids administered outpatient. Admission-level intervention without admission. Urinalysis: Epithelial casts 1+ (direct evidence of tubular cell death), Hyaline casts 1+, Protein 24.9 mg/dL (HIGH), Uric acid 8.5 rising. No hospitalization ordered.', metrics:[{l:'eGFR',v:'20',t:'c'},{l:'CRE',v:'2.25',t:'c'},{l:'BUN',v:'59 (H)',t:'c'},{l:'Epithelial Casts',v:'1+ ← key',t:'c'},{l:'Urine Protein',v:'24.9 (H)',t:'c'},{l:'Uric Acid',v:'8.5 (H)',t:'c'}] },
+      { date:'Feb 27, 2026', type:'warning', title:'Predonine Doubled — Still No Response', detail:'Steroid escalated to 10mg/day. eGFR unchanged at 20. Flat line — no improvement from steroid escalation in any direction.', metrics:[{l:'eGFR',v:'20 (flat)',t:'c'},{l:'Predonine',v:'10mg/day',t:'w'}] },
+    ]
+  },
+  {
+    label: 'Phase 4: Specialist Intervention (Mar 2026) — Too Late',
+    ph: 'ph-blue',
+    events: [
+      { date:'Mar 3, 2026', type:'intervention', title:'<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>First Nephrology Contact — 39 Days After First Alarm', detail:'First specialist contact. Cystatin C 3.64 mg/L (4.4× normal) — independently confirms severe structural damage regardless of muscle mass. UPCr 0.76 (5× normal). Hyaline casts worsened to 2+. IMMEDIATE ADMISSION ORDERED — proves patient required inpatient specialist care weeks earlier.', metrics:[{l:'eGFR',v:'18',t:'c'},{l:'Cystatin C',v:'3.64 (4.4×)',t:'c'},{l:'UPCr',v:'0.76 (5×)',t:'c'},{l:'Hyaline Casts',v:'2+ (worsened)',t:'c'},{l:'Gap from FP1',v:'39 days',t:'c'}] },
+      { date:'Mar 5–7, 2026', type:'intervention', title:'Admission — Delayed by Bed Availability', detail:'Hospitalization delayed by lack of available beds. Not a clinical decision — nephrologist intended same-day admission.', metrics:[] },
+      { date:'Mar 17, 2026', type:'intervention', title:'eGFR 14.9 — Continued Decline Despite Admission', detail:'Kidney function continuing to deteriorate despite inpatient care. BUN 46. Window for optimal recovery closing.', metrics:[{l:'eGFR',v:'14.9',t:'c'},{l:'BUN',v:'46',t:'c'}] },
+      { date:'Mar 18, 2026', type:'intervention', title:'Steroid Pulse Therapy — 51 Days After Confirmed AKI', detail:'500mg steroid pulse started. 51 days after Jan 26 confirmed AKI. Medical literature supports early pulse therapy for AIN — window for full recovery has likely passed.', metrics:[{l:'Pulse dose',v:'500mg/day',t:'w'},{l:'Days late',v:'51+ days',t:'c'}] },
+      { date:'Mar 21, 2026', type:'intervention', title:'Lowest Recorded eGFR: 13.6', detail:'Worst point in the clinical course. CRP still 55× normal — inflammation uncontrolled. NAG urine 29 U/L (10× normal) — direct tubular damage biomarker. Albumin 1.8–2.7 (all low — persistent protein wasting).', metrics:[{l:'eGFR',v:'13.6 ← LOWEST',t:'c'},{l:'CRE',v:'3.22',t:'c'},{l:'CRP',v:'16.63 (55×)',t:'c'},{l:'BUN',v:'60',t:'c'},{l:'NAG',v:'29 U/L (10×)',t:'c'}] },
+      { date:'Mar 22–25, 2026', type:'intervention', title:'Minimal Pulse Response — Structural Damage Confirmed', detail:'eGFR marginally recovers to 15.7 over 4 days. CRP still 70× normal at Mar 25. Structural damage confirmed by Cystatin C + casts + NAG. Biopsy pending to characterize extent of permanent injury.', metrics:[{l:'eGFR',v:'15.7',t:'c'},{l:'CRP',v:'21.2 (70×)',t:'c'},{l:'BUN',v:'92',t:'c'},{l:'Biopsy',v:'Pending',t:'w'}] },
+    ]
+  }
+];
+
+function buildTimeline() {
+  const c = document.getElementById('tl-container');
+  phases.forEach(ph => {
+    const sec = document.createElement('div');
+    sec.className = 'phase-section';
+    sec.innerHTML = `<div class="phase-header ${ph.ph}">${ph.label}</div>`;
+    ph.events.forEach(ev => {
+      const mHTML = ev.metrics.map(m => `<span class="mb mb-${m.t}">${m.l}: ${m.v}</span>`).join('');
+      sec.innerHTML += `
+        <div class="tl-event">
+          <div class="tl-dot d-${ev.type}"></div>
+          <div class="tl-card ${ev.type}">
+            <div class="tl-date">${ev.date}</div>
+            <div class="tl-title">${ev.title}</div>
+            <div class="tl-detail">${ev.detail}</div>
+            ${mHTML ? `<div class="tl-metrics">${mHTML}</div>` : ''}
+          </div>
+        </div>`;
+    });
+    c.appendChild(sec);
+  });
+}
+
+// ============================================================
+// EVIDENCE DATA
+// ============================================================
+
+const evidence = [
+  { s:'✅', name:'Complete lab data (eGFR, CRE, BUN, K, CRP, Phos, Uric Acid)', note:'21 data points Dec 2025–Mar 2026', p:null },
+  { s:'✅', name:'Cystatin C — Mar 3: 3.64 mg/L (4.4× normal)', note:'Independent structural damage confirmation — not affected by muscle mass or diet', p:null },
+  { s:'✅', name:'Urinalysis with casts — Feb 20 & Mar 3', note:'Epithelial casts (tubular death), hyaline casts, proteinuria', p:null },
+  { s:'✅', name:'January CRP data (fills critical evidence gap)', note:'Jan 5: 17.93 (60×) · Jan 19: 20.78 (69×) · Jan 25: 21.71 (72×) — via CancerCare app', p:null },
+  { s:'✅', name:'Medication records (full timeline)', note:'Includes potassium supplement Jan 13 = documented awareness before Dose 7', p:null },
+  { s:'✅', name:'Pre-screening consent form EPOC1904 v2.0', note:'Signed Sept 18, 2025. PI Harano Kenichi confirmed. AMED funding confirmed.', p:null },
+  { s:'✅', name:'Clinical interview records (面談票 ×3: Sept 18, Oct 3, Oct 10)', note:'"開示対象とならない" handwritten note on Oct 10 — hospital pre-marking as non-disclosable', p:null },
+  { s:'✅', name:'Hospitalization records (Oct 20–22 apheresis)', note:'CVC consent, peritoneal port surgery, full care team roster', p:null },
+  { s:'✅', name:'PET scan comparison images (Dec 24 vs Jan 26)', note:'Shows disease progression + raises contrast question on Jan 26', p:null },
+  { s:'✅', name:'Blood pressure trajectory', note:'Normal Oct 2025 → hypertensive (142/90) Feb 2026 = new-onset renal hypertension', p:null },
+  { s:'⏳', name:'Kidney biopsy results', note:'Pending — will confirm AIN vs ATN and unlock secondary Clinical Research Act claim', p:'HIGH' },
+  { s:'❌', name:'Trial Protocol Document (治験実施計画書) — EPOC1904 full protocol', note:'CRITICAL: Contains DLT definitions, organ function thresholds, monitoring schedule, and stopping rules', p:'CRITICAL' },
+  { s:'❌', name:'Full hospital medical records Jan–Mar 2026', note:'All clinical notes, orders, and nursing records during trial and outpatient period', p:'CRITICAL' },
+  { s:'❌', name:'Nephrologist written opinion / clinical report', note:'Referral timeliness assessment, prognosis, structural damage expert opinion', p:'CRITICAL' },
+  { s:'❌', name:'Jan 26 discharge summary', note:'"Swollen kidneys" notation and absence of nephrology referral — key document', p:'HIGH' },
+  { s:'❌', name:'Jan 26 PET/CT radiology report', note:'Determine if iodinated CT contrast was administered with eGFR 31 — potential additional negligence', p:'HIGH' },
+  { s:'❌', name:'Adverse event reports filed with CRB / PMDA', note:'May reveal delayed or absent reporting of kidney injury as SAE', p:'HIGH' },
+  { s:'❌', name:'CRB meeting minutes — protocol amendment (dose reduction)', note:'Oct 10 面談票 references protocol revision — was CRB properly notified?', p:'HIGH' },
+  { s:'❌', name:'Oncologist written statement', note:'Confirms specific regimens/trials requiring eGFR >60 and OCCC recurrence probability', p:'HIGH' },
+];
+
+const evIconMap = {
+  '✅': '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+  '⏳': '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+  '❌': '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>'
+};
+
+function buildEvidence() {
+  const c = document.getElementById('ev-container');
+  const obtained = evidence.filter(e => e.s === '✅').length;
+  const pending  = evidence.filter(e => e.s === '⏳').length;
+  const missing  = evidence.filter(e => e.s === '❌').length;
+  c.innerHTML = `
+    <div class="ev-summary">
+      <div class="ev-summary-box" style="background:#dcfce7;">
+        <div class="ev-count" style="color:#16a34a;">${obtained}</div>
+        <div class="ev-label" style="color:#15803d;">In Hand</div>
+      </div>
+      <div class="ev-summary-box" style="background:#fef3c7;">
+        <div class="ev-count" style="color:#d97706;">${pending}</div>
+        <div class="ev-label" style="color:#92400e;">Pending</div>
+      </div>
+      <div class="ev-summary-box" style="background:#fee2e2;">
+        <div class="ev-count" style="color:#dc2626;">${missing}</div>
+        <div class="ev-label" style="color:#991b1b;">Still Needed</div>
+      </div>
+      <div class="ev-summary-box" style="background:#f0fdf4; border:1px solid #bbf7d0;">
+        <div class="ev-count" style="color:#16a34a;">${Math.round(obtained/evidence.length*100)}%</div>
+        <div class="ev-label" style="color:#15803d;">Complete</div>
+      </div>
+    </div>`;
+  evidence.forEach(ev => {
+    const d = document.createElement('div');
+    d.className = 'ev-item';
+    d.innerHTML = `
+      <div class="ev-icon">${evIconMap[ev.s] || ev.s}</div>
+      <div style="flex:1;">
+        <div class="ev-name">${ev.name}</div>
+        <div class="ev-note">${ev.note}</div>
+      </div>
+      ${ev.p ? `<div class="pr-badge pr-${ev.p.toLowerCase()}">${ev.p}</div>` : ''}`;
+    c.appendChild(d);
+  });
+}
+
+// ============================================================
+// ARGUMENTS DATA
+// ============================================================
+
+const args = [
+  {
+    str: 'VERY STRONG', cls: 'vs', bc: 'badge-vs',
+    title: 'Protocol Deviation — Dosing Into Known Renal Decline',
+    desc: 'The hospital reviewed pre-dose labs on Jan 5 showing eGFR 53 (35% crash) and CRP 60× normal, then deliberately continued dosing. Standard Phase 1 protocol for any trial with a DLT endpoint requires a HOLD at eGFR <60. The documentation trail is unambiguous.',
+    bullets: [
+      'Jan 5 lab notes explicitly state "pre-dose labs before Part 2" — deliberate knowledge confirmed',
+      'eGFR 53 = 35% crash from baseline 106 — KDIGO "Risk" exceeded at this single data point',
+      'CRP 17.93 (60× normal) on the same Jan 5 labs — massive systemic inflammation visible',
+      'Standard Phase 1 protocol: eGFR <60 = HOLD/Discontinuation criterion',
+      'jRCT registry: "adequate organ function" is a named enrollment criterion (#8)',
+      'Potassium supplement started Jan 13 (before Dose 7) = documented awareness of renal impact',
+      'Dose 7 given Jan 19 with eGFR 44 (>50% decline) and CRP 69× normal — both worsening',
+      'NCCHE was sponsor-investigator — no independent party monitoring dosing decisions',
+      'Trial primary endpoint was dose-limiting toxicity — investigators specifically tasked to catch exactly this signal',
+    ],
+    needed: '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg> Critical: Trial protocol document (治験実施計画書) — specifically the DLT definition, Discontinuation/Hold criteria, and "adequate organ function" threshold from inclusion criterion #8.'
+  },
+  {
+    str: 'VERY STRONG', cls: 'vs', bc: 'badge-vs',
+    title: 'Failure to Refer — 39-Day Gap from First Alarm to Specialist',
+    desc: 'From the first documented abnormal renal value (Jan 5, eGFR 53) to first nephrology consultation (Mar 3), 39 days elapsed with active deterioration. The nephrologist\'s immediate admission order on Mar 3 is self-proving evidence of the weeks of neglect.',
+    bullets: [
+      'Jan 26: eGFR 31 (Stage 3b), kidneys "swollen" — discharged with no nephrology referral',
+      'Feb 6: eGFR 26 (Stage 4) — first outpatient visit, still no referral',
+      'Feb 13, 20, 27: Three more visits with worsening labs — no referral on any visit',
+      'Feb 20: Blood transfusion (2 units) + IV fluids administered outpatient — admission-level care without admission',
+      'Mar 3: Nephrologist\'s immediate action was to order inpatient admission — proves patient needed this weeks earlier',
+      'Admission delayed only by bed availability — nephrologist\'s clinical intent was same-day admission',
+      '39-day gap is legally indefensible for a Special Function Hospital (特定機能病院) under its heightened duty of care',
+    ],
+    needed: '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg> Critical: Jan 26 discharge summary · All outpatient records Feb 6–Mar 2 · Nephrologist written opinion on referral timeliness and prognosis.'
+  },
+  {
+    str: 'STRONG', cls: 's', bc: 'badge-s',
+    title: 'Inadequate Outpatient Treatment — Visibly Failing Protocol',
+    desc: 'Predonine 5mg/day was started and left unchanged for weeks despite continuous deterioration. The conservative dosing, delayed escalation, and failure to hospitalize despite blood transfusion requirement fall below the standard of care.',
+    bullets: [
+      'Predonine 5mg/day (Jan 28) — conservative for confirmed active AKI with CRP 72× normal',
+      'eGFR trajectory on 5mg Predonine: 26→25→20→20 — linear decline, no response',
+      'Steroid not escalated until Feb 27 — 30 days of visible treatment failure tolerated',
+      'Feb 20: Blood transfusion + IV fluids outpatient — no hospitalization despite admission-level intervention',
+      'Pulse therapy not initiated until Mar 18 — 51 days after confirmed AKI',
+      'CRP remained 60–70× normal throughout Feb — inflammation never controlled',
+      'Epithelial casts on Feb 20 urinalysis = direct evidence of active tubular cell death visible to treating team',
+    ],
+    needed: '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg> Important: Expert nephrologist opinion on standard of care for AKI/AIN steroid dosing and hospitalization criteria.'
+  },
+  {
+    str: 'STRONG', cls: 's', bc: 'badge-s',
+    title: 'Loss of Chance — Loss of Cancer Treatment Eligibility',
+    desc: 'The most powerful damages argument. Negligent management of Asuka\'s kidney injury may have permanently eliminated her ability to receive life-extending cancer treatment. At 43 years old with exceptional 36-month OCCC PFS, this converts a serious organ damage claim into a potential life expectancy reduction claim.',
+    bullets: [
+      'OCCC has a high recurrence rate — standard care requires chemotherapy and/or clinical trial access',
+      'Most platinum-based chemotherapy regimens require eGFR >60 for eligibility',
+      'Most clinical trials (including CAR-T/NK cell trials) require eGFR >60 as inclusion criterion',
+      'Asuka\'s current eGFR ceiling (13.6–15.7) is far below any treatment eligibility threshold',
+      'Exceptional 36-month PFS demonstrates she was treatment-responsive — highest possible damages tier',
+      'Sept 18 面談票 documents already-limited alternative trial options (E7820 excluded, few others)',
+      'She is now ineligible for re-enrollment in the very trial (iCAR-ILC-N101) that caused the injury',
+      'Cystatin C 3.64 + epithelial casts + NAG 10× normal = confirmed structural, not reversible damage',
+      'Converts organ damage claim → life expectancy reduction claim under Japanese civil law',
+    ],
+    needed: '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg> Critical: Oncologist written statement confirming eGFR >60 eligibility requirements for specific regimens; OCCC recurrence probability assessment; statement that Asuka is now excluded from iCAR-ILC-N101 re-enrollment.'
+  }
+];
+
+function buildArguments() {
+  const c = document.getElementById('arg-container');
+  args.forEach((a, i) => {
+    const d = document.createElement('div');
+    d.className = `arg-card ${a.cls}`;
+    d.innerHTML = `
+      <div class="arg-head">
+        <div class="arg-title">Argument ${i+1}: ${a.title}</div>
+        <div class="arg-badge ${a.bc}">${a.str}</div>
+      </div>
+      <div class="arg-desc">${a.desc}</div>
+      <ul class="arg-list">${a.bullets.map(b=>`<li>${b}</li>`).join('')}</ul>
+      <div class="arg-needed">${a.needed}</div>`;
+    c.appendChild(d);
+  });
+}
+
+// ============================================================
+// TAB SWITCHING
+// ============================================================
+
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ============================================================
+// INIT
+// ============================================================
+buildTimeline();
+buildEvidence();
+buildArguments();
+</script>
+</body>
+</html>
