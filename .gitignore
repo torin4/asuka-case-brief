@@ -1,0 +1,10 @@
+node_modules
+.next
+
+.DS_Store
+
+# Local environment variables (store only in Vercel)
+.env
+.env.local
+.env.*.local
+
