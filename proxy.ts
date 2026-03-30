@@ -2,15 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const COOKIE_NAME = 'case_auth';
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
 
   // Let the login flow and Next internals through.
   if (
     pathname.startsWith('/login') ||
     pathname.startsWith('/api/login') ||
-    pathname.startsWith('/api/logout') ||
-    pathname.startsWith('/_next')
+    pathname.startsWith('/api/logout')
   ) {
     return NextResponse.next();
   }
@@ -25,6 +24,7 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|robots.txt|login|api/login|api/logout).*)']
+  // Avoid intercepting Next's own assets and files.
+  matcher: ['/((?!login|api/login|api/logout|_next|favicon.ico|robots.txt).*)']
 };
 
